@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OM-CHART-GPT</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f1f1f1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .chat-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 600px;
+      height: 90%;
+    }
+
+    .chat-container {
+      width: 100%;
+      height: 80%;
+      overflow-y: auto;
+      background-color: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .input-container {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      padding: 10px;
+      background-color: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    #image {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      justify-content: center;
+      padding: 10px 15px;
+      border: 2px solid #4CAF50;
+      border-radius: 50px;
+      background-color: #ffffff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+
+    #image img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    #image:hover {
+      background-color: #f1f1f1;
+      border-color: #45a049;
+    }
+
+    #image:hover img {
+      transform: scale(1.1);
+    }
+
+    #prompt {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      resize: none;
+      background-color: #f9f9f9;
+      transition: border-color 0.3s ease;
+    }
+
+    #prompt:focus {
+      border-color: #4CAF50;
+      outline: none;
+    }
+
+    #submit {
+      padding: 12px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    #submit:hover {
+      background-color: #45a049;
+    }
+
+    .user-chat-box, .ai-chat-box {
+      display: flex;
+      align-items: flex-start;
+      max-width: 80%;
+    }
+
+    .user-chat-area, .ai-chat-area {
+      padding: 12px;
+      border-radius: 10px;
+      background-color: #e1f5fe;
+      word-wrap: break-word;
+    }
+
+    .user-chat-box .user-chat-area {
+      background-color: #dcf8c6;
+      align-self: flex-end;
+    }
+
+    .ai-chat-box .ai-chat-area {
+      background-color: #f1f1f1;
+      align-self: flex-start;
+    }
+
+    .chooseimg {
+      max-width: 100px;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .chat-wrapper {
+        max-width: 100%;
+        padding: 10px;
+      }
+
+      .chat-container {
+        height: 70%;
+      }
+
+      #prompt {
+        font-size: 12px;
+      }
+
+      #submit {
+        padding: 10px;
+      }
+    }
+
+    .app-name {
+      font-size: 24px;
+      font-weight: bold;
+      color: #4CAF50;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .dots {
+      display: inline-block;
+      font-size: 24px;
+      animation: blink 1.5s infinite steps(5, end);
+    }
+
+    .dots span {
+      opacity: 0;
+      animation: blinkStep 1.5s infinite;
+    }
+
+    .dots span:nth-child(1) { animation-delay: 0s; }
+    .dots span:nth-child(2) { animation-delay: 0.3s; }
+    .dots span:nth-child(3) { animation-delay: 0.6s; }
+    .dots span:nth-child(4) { animation-delay: 0.9s; }
+    .dots span:nth-child(5) { animation-delay: 1.2s; }
+
+    @keyframes blinkStep {
+      0% { opacity: 0; }
+      50% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-wrapper">
+    <div class="app-name">OM-CHART-GPT</div>
+    <div class="chat-container"></div>
+
+    <div class="input-container">
+      <div id="image" class="image-input">
+        <input type="file" accept="image/*" style="display: none;" />
+        <img src="man.jpg" alt="Choose an image" />
+      </div>
+      <textarea id="prompt" placeholder="Type your message..." rows="3"></textarea>
+      <button id="submit">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const promptInput = document.querySelector("#prompt");
+    const submitBtn = document.querySelector("#submit");
+    const chatContainer = document.querySelector(".chat-container");
+    const imageBtn = document.querySelector("#image");
+    const image = document.querySelector("#image img");
+    const imageInput = document.querySelector("#image input");
+
+    const Api_Url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyBtSysD5Uo9n1SemBa8Tp9N7anl2ksHp6U";
+
+    let user = {
+      message: "",
+      file: {
+        mime_type: null,
+        data: null
+      }
+    };
+
+    function createChatBox(html, className) {
+      const div = document.createElement("div");
+      div.className = className;
+      div.innerHTML = html;
+      return div;
+    }
+
+    async function generateResponse(aiChatBox) {
+      const text = aiChatBox.querySelector(".ai-chat-area");
+      text.innerHTML = '<div class="dots"><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span></div>';
+
+      const parts = [{ text: user.message }];
+      if (user.file.data) {
+        parts.push({ inline_data: user.file });
+      }
+
+      const requestOptions = {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts }] })
+      };
+
+      try {
+        const response = await fetch(Api_Url, requestOptions);
+        const data = await response.json();
+
+        if (data.candidates && data.candidates.length > 0) {
+          const apiResponse = data.candidates[0].content.parts[0].text;
+          text.innerHTML = apiResponse.replace(/\*\*(.*?)\*\*/g, "$1");
+        } else {
+          text.innerHTML = "No response received.";
+        }
+      } catch (error) {
+        text.innerHTML = "Error: Could not get response.";
+        console.error(error);
+      } finally {
+        chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: "smooth" });
+        image.src = "img.svg";
+        user.file = { mime_type: null, data: null };
+      }
+    }
+
+    function handleChat() {
+      const message = promptInput.value.trim();
+      if (!message) return;
+
+      user.message = message;
+      promptInput.value = "";
+
+      const userHtml = `
+        <img src="user.png" alt="" width="8%">
+        <div class="user-chat-area">
+          ${user.message}
+          ${user.file.data ? `<img src="data:${user.file.mime_type};base64,${user.file.data}" class="chooseimg" />` : ""}
+        </div>
+      `;
+
+      const userChatBox = createChatBox(userHtml, "user-chat-box");
+      chatContainer.appendChild(userChatBox);
+      chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: "smooth" });
+
+      setTimeout(() => {
+        const aiHtml = `
+          <img src="ai.png" alt="" width="10%">
+          <div class="ai-chat-area">
+            <img src="loading.webp" alt="Loading" class="load" width="50px">
+          </div>
+        `;
+        const aiChatBox = createChatBox(aiHtml, "ai-chat-box");
+        chatContainer.appendChild(aiChatBox);
+        generateResponse(aiChatBox);
+      }, 600);
+    }
+
+    submitBtn.addEventListener("click", () => {
+      handleChat();
+    });
+
+    promptInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleChat();
+      }
+    });
+
+    imageInput.addEventListener("change", () => {
+      const file = imageInput.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target.result.split(",")[1];
+        user.file = {
+          mime_type: file.type,
+          data: base64
+        };
+        image.src = `data:${file.type};base64,${base64}`;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    imageBtn.addEventListener("click", () => {
+      imageInput.click();
+    });
+  </script>
+</body>
+</html>
